@@ -7,12 +7,14 @@ export default function Home() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [config, setConfig] = useState({
     type: "max" as "max" | "min",
+    method: "standard" as "standard" | "bigM" | "twoPhase",
     numVars: 2,
     numConstraints: 2,
   });
 
   const [objectiveCoeffs, setObjectiveCoeffs] = useState<string[]>([]);
   const [constraintsCoeffs, setConstraintsCoeffs] = useState<string[][]>([]);
+  const [constraintSigns, setConstraintSigns] = useState<string[]>([]);
   const [result, setResult] = useState<SimplexResult | null>(null);
 
   const handleConfigSubmit = (e: React.FormEvent) => {
@@ -23,6 +25,7 @@ export default function Home() {
       new Array(config.numVars + 1).fill("") // +1 for RHS
     );
     setConstraintsCoeffs(initialConstraints);
+    setConstraintSigns(new Array(config.numConstraints).fill("<="));
     setStep(2);
   };
 
@@ -38,14 +41,16 @@ export default function Home() {
       config.numVars,
       config.numConstraints,
       obj,
-      cons
+      cons,
+      constraintSigns,
+      config.method
     );
     setResult(res);
     setStep(3);
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 p-8 font-sans selection:bg-indigo-500/30">
+    <main className="min-h-screen bg-transparent text-neutral-100 p-8 font-sans selection:bg-indigo-500/30">
       <div className="max-w-5xl mx-auto space-y-12">
         <header className="text-center space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
@@ -69,8 +74,8 @@ export default function Home() {
                     type="button"
                     onClick={() => setConfig({ ...config, type: "max" })}
                     className={`p-3 rounded-lg border transition-all ${config.type === "max"
-                        ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
-                        : "bg-neutral-800 border-neutral-700 hover:border-neutral-600"
+                      ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
+                      : "bg-neutral-800 border-neutral-700 hover:border-neutral-600"
                       }`}
                   >
                     Maximize
@@ -79,11 +84,49 @@ export default function Home() {
                     type="button"
                     onClick={() => setConfig({ ...config, type: "min" })}
                     className={`p-3 rounded-lg border transition-all ${config.type === "min"
-                        ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
-                        : "bg-neutral-800 border-neutral-700 hover:border-neutral-600"
+                      ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
+                      : "bg-neutral-800 border-neutral-700 hover:border-neutral-600"
                       }`}
                   >
                     Minimize
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-400 mb-2">
+                  solving Method
+                </label>
+                <div className="grid grid-cols-3 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, method: "standard" })}
+                    className={`p-3 rounded-lg border transition-all text-sm ${config.method === "standard"
+                      ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
+                      : "bg-neutral-800 border-neutral-700 hover:border-neutral-600"
+                      }`}
+                  >
+                    Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, method: "bigM" })}
+                    className={`p-3 rounded-lg border transition-all text-sm ${config.method === "bigM"
+                      ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
+                      : "bg-neutral-800 border-neutral-700 hover:border-neutral-600"
+                      }`}
+                  >
+                    Big M
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, method: "twoPhase" })}
+                    className={`p-3 rounded-lg border transition-all text-sm ${config.method === "twoPhase"
+                      ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
+                      : "bg-neutral-800 border-neutral-700 hover:border-neutral-600"
+                      }`}
+                  >
+                    Two Phase
                   </button>
                 </div>
               </div>
@@ -199,7 +242,17 @@ export default function Home() {
                         </span>
                       </div>
                     ))}
-                    <span className="mx-2">≤</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newSigns = [...constraintSigns];
+                        newSigns[i] = newSigns[i] === "<=" ? ">=" : "<=";
+                        setConstraintSigns(newSigns);
+                      }}
+                      className="mx-2 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-indigo-400 font-mono transition-colors"
+                    >
+                      {constraintSigns[i]}
+                    </button>
                     <input
                       type="number"
                       placeholder="b"
